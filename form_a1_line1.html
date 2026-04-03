@@ -231,7 +231,6 @@ async function submitForm() {
   document.getElementById('loading').classList.add('show');
   try {
       await fetch(SHEET_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-      await fetch(SHEET_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
     showSuccess(name, date, shift, machines);
   } catch(e) {
     alert(lang==='zh' ? '提交失败，请重试' : 'Submission failed, please retry');
