@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factory Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #1c2128; --border: #30363d;
+    --blue: #388bfd; --blue-dim: #1f3a5f; --green: #3fb950; --green-dim: #1a3d2b;
+    --amber: #d29922; --amber-dim: #3d2f0a; --red: #f85149; --red-dim: #3d1a1a;
+    --purple: #8b5cf6; --purple-dim: #2d1f4a;
+    --text: #e6edf3; --text-dim: #8b949e; --text-dimmer: #484f58;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', 'Noto Sans SC', sans-serif;
+    --r: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .header-left h1 { font-size: 15px; font-weight: 700; color: var(--text); }
+  .updated-tag { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .lang-toggle { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .lang-btn { padding: 5px 12px; font-size: 11px; font-weight: 600; color: var(--text-dim); cursor: pointer; border: none; background: transparent; font-family: var(--sans); transition: all .15s; }
+  .lang-btn.active { background: var(--blue); color: #fff; }
+  .refresh-btn { padding: 6px 14px; font-size: 12px; font-weight: 600; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text-dim); cursor: pointer; font-family: var(--sans); transition: all .15s; }
+  .refresh-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* ── BODY ── */
+  .body { padding: 16px; max-width: 900px; margin: 0 auto; }
+
+  /* ── STAT PILLS ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; }
+  .stat-card .sv { font-size: 22px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+  .stat-card .sk { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+  /* ── LINE HEADER ── */
+  .line-header { display: flex; align-items: center; gap: 8px; margin: 16px 0 8px; }
+  .line-badge { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; }
+  .l1 .line-badge { background: var(--blue-dim); color: var(--blue); }
+  .l2 .line-badge { background: var(--amber-dim); color: var(--amber); }
+  .line-label { font-size: 12px; color: var(--text-dim); }
+
+  /* ── MACHINE TABLE ── */
+  .machine-table { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 8px; }
+  .table-head { display: grid; grid-template-columns: 100px 1fr 1fr 90px 80px 36px; gap: 0; border-bottom: 1px solid var(--border); padding: 8px 14px; }
+  .table-head span { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-dimmer); }
+  .machine-row { display: grid; grid-template-columns: 100px 1fr 1fr 90px 80px 36px; gap: 0; padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .1s; align-items: center; }
+  .machine-row:last-child { border-bottom: none; }
+  .machine-row:hover { background: var(--surface2); }
+  .machine-row.expanded { background: var(--surface2); }
+  .cell { font-size: 13px; padding-right: 8px; }
+  .cell.mono { font-family: var(--mono); font-size: 12px; }
+  .cell.dim { color: var(--text-dim); font-size: 12px; }
+  .cell.name { font-weight: 600; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; font-family: var(--mono); }
+  .badge-green  { background: var(--green-dim); color: var(--green); }
+  .badge-amber  { background: var(--amber-dim); color: var(--amber); }
+  .badge-red    { background: var(--red-dim); color: var(--red); }
+  .badge-purple { background: var(--purple-dim); color: var(--purple); }
+  .badge-gray   { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+  .chevron { color: var(--text-dimmer); font-size: 12px; text-align: center; transition: transform .2s; }
+  .machine-row.expanded .chevron { transform: rotate(90deg); }
+
+  /* ── DETAIL PANEL ── */
+  .detail-panel { display: none; background: var(--bg); border-bottom: 1px solid var(--border); padding: 14px 16px; }
+  .detail-panel.open { display: block; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .detail-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; }
+  .detail-section h4 { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-dimmer); margin-bottom: 10px; }
+  .detail-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; gap: 8px; }
+  .detail-row:last-child { margin-bottom: 0; }
+  .detail-row .dk { color: var(--text-dim); }
+  .detail-row .dv { font-family: var(--mono); font-size: 11px; text-align: right; color: var(--text); }
+  .log-list { display: flex; flex-direction: column; gap: 5px; }
+  .log-item { font-size: 11px; color: var(--text-dim); font-family: var(--mono); padding: 5px 8px; background: var(--surface2); border-radius: 4px; }
+  .log-item .lt { color: var(--text-dimmer); }
+  .no-data { font-size: 12px; color: var(--text-dimmer); font-style: italic; }
+
+  /* ── LOADING / ERROR ── */
+  .loading-wrap { display: flex; align-items: center; justify-content: center; padding: 60px 20px; flex-direction: column; gap: 12px; }
+  .spin { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-wrap p { font-size: 13px; color: var(--text-dim); }
+  .error-wrap { background: var(--red-dim); border: 1px solid var(--red); border-radius: var(--r); padding: 14px 16px; margin: 16px 0; font-size: 13px; color: var(--red); }
+
+  @media (max-width: 600px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .table-head, .machine-row { grid-template-columns: 90px 1fr 80px 36px; }
+    .table-head span:nth-child(2), .cell:nth-child(2),
+    .table-head span:nth-child(4), .cell:nth-child(4) { display: none; }
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1 id="h-title">Factory Dashboard</h1>
+    <span class="updated-tag" id="updated-tag">--</span>
+  </div>
+  <div class="header-right">
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" id="btn-zh" onclick="setLang('zh')">中文</button>
+    </div>
+    <button class="refresh-btn" onclick="loadData()" data-en="⟳ Refresh" data-zh="⟳ 刷新">⟳ Refresh</button>
+  </div>
+</div>
+
+<div class="body">
+  <div id="loading-wrap" class="loading-wrap">
+    <div class="spin"></div>
+    <p data-en="Loading data…" data-zh="加载中…">Loading data…</p>
+  </div>
+  <div id="error-wrap" class="error-wrap" style="display:none"></div>
+  <div id="content" style="display:none">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card"><div class="sv" id="stat-machines">12</div><div class="sk" data-en="Total Machines" data-zh="机台总数">Total Machines</div></div>
+      <div class="stat-card"><div class="sv" id="stat-staffed" style="color:var(--green)">--</div><div class="sk" data-en="Staffed Today" data-zh="今日已分配">Staffed Today</div></div>
+      <div class="stat-card"><div class="sv" id="stat-pm" style="color:var(--blue)">--</div><div class="sk" data-en="PM This Week" data-zh="本周PM次数">PM This Week</div></div>
+      <div class="stat-card"><div class="sv" id="stat-5s" style="color:var(--purple)">--</div><div class="sk" data-en="5S This Week" data-zh="本周5S次数">5S This Week</div></div>
+    </div>
+
+    <!-- Line 1 -->
+    <div class="line-header l1">
+      <span class="line-badge">LINE 1</span>
+      <span class="line-label" data-en="Stringers 1.1 – 1.6" data-zh="焊接机 1.1 – 1.6">Stringers 1.1 – 1.6</span>
+    </div>
+    <div class="machine-table">
+      <div class="table-head">
+        <span data-en="Machine" data-zh="机台">Machine</span>
+        <span data-en="Operator (Current Shift)" data-zh="当班操作工">Operator (Current Shift)</span>
+        <span data-en="Last PM" data-zh="上次PM">Last PM</span>
+        <span data-en="5S Today" data-zh="今日5S">5S Today</span>
+        <span data-en="Last 5S" data-zh="上次5S">Last 5S</span>
+        <span></span>
+      </div>
+      <div id="rows-l1"></div>
+    </div>
+
+    <!-- Line 2 -->
+    <div class="line-header l2">
+      <span class="line-badge">LINE 2</span>
+      <span class="line-label" data-en="Stringers 2.1 – 2.6" data-zh="焊接机 2.1 – 2.6">Stringers 2.1 – 2.6</span>
+    </div>
+    <div class="machine-table">
+      <div class="table-head">
+        <span data-en="Machine" data-zh="机台">Machine</span>
+        <span data-en="Operator (Current Shift)" data-zh="当班操作工">Operator (Current Shift)</span>
+        <span data-en="Last PM" data-zh="上次PM">Last PM</span>
+        <span data-en="5S Today" data-zh="今日5S">5S Today</span>
+        <span data-en="Last 5S" data-zh="上次5S">Last 5S</span>
+        <span></span>
+      </div>
+      <div id="rows-l2"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbwy1kieESA4BlsN9sAI2N0b-v53sYN-20MLNVIKdHh0kIYcORD1eJmdMx3CbJTRn39ucw/exec";
+const MACHINES = ['1.1','1.2','1.3','1.4','1.5','1.6','2.1','2.2','2.3','2.4','2.5','2.6'];
+
+let lang = 'en';
+let allData = {};
+
+// ── Language ──
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = l === 'en' ? el.dataset.en : el.dataset.zh;
+  });
+  document.getElementById('btn-en').className = 'lang-btn' + (l==='en'?' active':'');
+  document.getElementById('btn-zh').className = 'lang-btn' + (l==='zh'?' active':'');
+  if (Object.keys(allData).length) renderAll();
+}
+document.addEventListener('DOMContentLoaded', () => setLang('en'));
+
+// ── Load data ──
+function loadData() {
+  document.getElementById('loading-wrap').style.display = 'flex';
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('error-wrap').style.display = 'none';
+
+  // Remove old script tag if exists
+  const old = document.getElementById('jsonp-script');
+  if (old) old.remove();
+
+  // JSONP: inject script tag to bypass CORS
+  const cbName = 'dashboardCallback_' + Date.now();
+  window[cbName] = function(data) {
+    delete window[cbName];
+    if (data.error) {
+      document.getElementById('loading-wrap').style.display = 'none';
+      const err = document.getElementById('error-wrap');
+      err.style.display = 'block';
+      err.textContent = (lang==='zh'?'数据加载失败：':'Load error: ') + data.error;
+      return;
+    }
+    allData = data;
+    renderAll();
+    document.getElementById('loading-wrap').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    document.getElementById('updated-tag').textContent =
+      (lang==='zh'?'更新于 ':'Updated ') + new Date().toLocaleTimeString('en-US',{hour12:false});
+  };
+
+  const script = document.createElement('script');
+  script.id = 'jsonp-script';
+  script.src = API + '?action=dashboard&callback=' + cbName + '&t=' + Date.now();
+  script.onerror = function() {
+    delete window[cbName];
+    document.getElementById('loading-wrap').style.display = 'none';
+    const err = document.getElementById('error-wrap');
+    err.style.display = 'block';
+    err.textContent = lang==='zh'?'网络错误，请刷新重试':'Network error, please refresh';
+  };
+  document.head.appendChild(script);
+}
+
+// ── Render ──
+function renderAll() {
+  const shift = allData.shift || {};
+  const pm    = allData.pm    || {};
+  const fives = allData.fives || {};
+
+  // Stats
+  const today = new Date().toLocaleDateString('en-CA');
+  const weekAgo = new Date(Date.now() - 7*24*3600*1000).toLocaleDateString('en-CA');
+  let staffed=0, pmWeek=0, fsWeek=0;
+
+  MACHINES.forEach(id => {
+    const m = 'Stringer-' + id;
+    if (shift[m]?.operator) staffed++;
+    if (pm[m]) pmWeek += pm[m].filter(r => r.date >= weekAgo).length;
+    if (fives[m]) fsWeek += fives[m].filter(r => r.date >= weekAgo).length;
+  });
+
+  document.getElementById('stat-staffed').textContent = staffed + ' / 12';
+  document.getElementById('stat-pm').textContent = pmWeek;
+  document.getElementById('stat-5s').textContent = fsWeek;
+
+  // Rows
+  renderRows('rows-l1', ['1.1','1.2','1.3','1.4','1.5','1.6'], shift, pm, fives, today);
+  renderRows('rows-l2', ['2.1','2.2','2.3','2.4','2.5','2.6'], shift, pm, fives, today);
+}
+
+function renderRows(containerId, ids, shift, pm, fives, today) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  ids.forEach(id => {
+    const m = 'Stringer-' + id;
+    const s = shift[m] || {};
+    const pmList  = (pm[m]    || []).slice().reverse();
+    const fsList  = (fives[m] || []).slice().reverse();
+    const pmLast  = pmList[0];
+    const fsLast  = fsList[0];
+    const fsToday = fsList.filter(r => r.date === today).length;
+
+    // Operator badge
+    const opText = s.operator || (lang==='zh'?'未分配':'Unassigned');
+    const opClass = s.operator ? 'badge-green' : 'badge-gray';
+
+    // PM badge
+    const pmText = pmLast ? fmtTime(pmLast.timestamp) : (lang==='zh'?'无记录':'None');
+    const pmClass = pmLast ? 'badge-blue' : 'badge-gray';
+
+    // 5S today badge
+    const fsClass = fsToday >= 2 ? 'badge-green' : fsToday === 1 ? 'badge-amber' : 'badge-gray';
+    const fsText  = fsToday > 0 ? fsToday + 'x' : '0';
+
+    // Last 5S
+    const fsLastText = fsLast ? fmtTime(fsLast.timestamp) : (lang==='zh'?'无记录':'None');
+
+    const row = document.createElement('div');
+    row.className = 'machine-row';
+    row.id = 'row-' + id;
+    row.innerHTML = `
+      <div class="cell mono">${m}</div>
+      <div class="cell"><span class="badge ${opClass}">${opText}</span>${s.shift ? ' <span style="font-size:10px;color:var(--text-dimmer)">${s.shift}</span>' : ''}</div>
+      <div class="cell dim">${pmText}</div>
+      <div class="cell"><span class="badge ${fsClass}">${fsText}</span></div>
+      <div class="cell dim">${fsLastText}</div>
+      <div class="chevron">›</div>
+    `;
+    row.onclick = () => toggleDetail(id, s, pmList, fsList, today);
+    container.appendChild(row);
+
+    // Detail panel
+    const detail = document.createElement('div');
+    detail.className = 'detail-panel';
+    detail.id = 'detail-' + id;
+    container.appendChild(detail);
+  });
+}
+
+function toggleDetail(id, s, pmList, fsList, today) {
+  const row    = document.getElementById('row-' + id);
+  const detail = document.getElementById('detail-' + id);
+  const isOpen = detail.classList.contains('open');
+
+  // Close all
+  document.querySelectorAll('.detail-panel.open').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.machine-row.expanded').forEach(r => r.classList.remove('expanded'));
+
+  if (!isOpen) {
+    row.classList.add('expanded');
+    detail.classList.add('open');
+    detail.innerHTML = buildDetail(id, s, pmList, fsList, today);
+  }
+}
+
+function buildDetail(id, s, pmList, fsList, today) {
+  const m = 'Stringer-' + id;
+  const en = lang === 'en';
+
+  // Shift section
+  const shiftHTML = `
+    <div class="detail-section">
+      <h4>${en ? 'Current Shift' : '当班信息'}</h4>
+      <div class="detail-row"><span class="dk">${en?'Machine':'机台'}</span><span class="dv">${m}</span></div>
+      <div class="detail-row"><span class="dk">${en?'Operator':'操作工'}</span><span class="dv">${s.operator || (en?'Unassigned':'未分配')}</span></div>
+      <div class="detail-row"><span class="dk">${en?'Shift':'班次'}</span><span class="dv">${s.shift || '--'}</span></div>
+      <div class="detail-row"><span class="dk">${en?'Team Leader':'班组长'}</span><span class="dv">${s.teamLeader || '--'}</span></div>
+      <div class="detail-row"><span class="dk">${en?'Date':'日期'}</span><span class="dv">${s.date || '--'}</span></div>
+    </div>`;
+
+  // PM section
+  const pmItems = pmList.slice(0,5).map(r =>
+    `<div class="log-item"><span class="lt">${fmtTime(r.timestamp)}</span>  ${r.name}</div>`
+  ).join('') || `<div class="no-data">${en?'No records':'暂无记录'}</div>`;
+  const pmHTML = `
+    <div class="detail-section">
+      <h4>${en ? 'PM Records (last 5)' : 'PM记录（最近5条）'}</h4>
+      <div class="log-list">${pmItems}</div>
+    </div>`;
+
+  // 5S section
+  const fsItems = fsList.slice(0,5).map(r =>
+    `<div class="log-item"><span class="lt">${fmtTime(r.timestamp)}</span>  ${r.name}</div>`
+  ).join('') || `<div class="no-data">${en?'No records':'暂无记录'}</div>`;
+  const todayCount = fsList.filter(r => r.date === today).length;
+  const fsHTML = `
+    <div class="detail-section">
+      <h4>${en ? '5S Records (last 5)' : '5S记录（最近5条）'}</h4>
+      <div style="margin-bottom:8px;font-size:11px;color:var(--text-dim)">${en?'Today':'今日'}: <span style="color:var(--purple);font-weight:700">${todayCount}x</span></div>
+      <div class="log-list">${fsItems}</div>
+    </div>`;
+
+  return `<div class="detail-grid">${shiftHTML}${pmHTML}${fsHTML}</div>`;
+}
+
+function fmtTime(ts) {
+  if (!ts) return '--';
+  // ts format: "4/3/2026, 11:15:15" or similar
+  const d = new Date(ts);
+  if (isNaN(d)) return ts;
+  const today = new Date();
+  const isToday = d.toLocaleDateString() === today.toLocaleDateString();
+  if (isToday) return d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:false});
+  return d.toLocaleDateString('en-CA') + ' ' + d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+}
+
+// ── Auto refresh at 00:00 and 12:00 ──
+function scheduleRefresh() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setSeconds(0); next.setMilliseconds(0);
+  const h = now.getHours();
+  if (h < 12) { next.setHours(12); next.setMinutes(0); }
+  else if (h < 24) { next.setDate(next.getDate()+1); next.setHours(0); next.setMinutes(0); }
+  const ms = next - now;
+  setTimeout(() => { loadData(); scheduleRefresh(); }, ms);
+}
+
+loadData();
+scheduleRefresh();
+</script>
+</body>
+</html>

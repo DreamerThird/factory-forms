@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>5S Log / 预防性维护</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  :root{
+    --bg:#f4f6fa;--white:#fff;--border:#e2e6f0;
+    --blue:#1d4ed8;#ecfdf5:#eff4ff;#a7f3d0:#dbeafe;
+    --green:#15803d;--green-light:#f0fdf4;
+    --text:#111827;--dim:#6b7280;--dimmer:#9ca3af;
+    --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans','Noto Sans SC',sans-serif;
+    --r:10px;--sh:0 1px 4px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;}
+  .header{background:#059669;padding:16px 20px;position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;justify-content:space-between;}
+  .header-left h1{font-size:16px;font-weight:700;color:#fff;}
+  .header-left p{font-size:11px;color:rgba(255,255,255,.65);margin-top:2px;}
+  .lang-toggle{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);
+    border-radius:20px;display:flex;overflow:hidden;}
+  .lang-btn{padding:5px 14px;font-size:12px;font-weight:600;color:rgba(255,255,255,.6);
+    cursor:pointer;border:none;background:transparent;font-family:var(--sans);transition:all .15s;}
+  .lang-btn.active{background:#fff;color:#059669;border-radius:20px;}
+  .body{padding:16px 16px 48px;max-width:520px;margin:0 auto;}
+  .card{background:#fff;border-radius:var(--r);border:1px solid var(--border);
+    box-shadow:var(--sh);padding:16px;margin-bottom:12px;}
+  .card-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--dimmer);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:6px;}
+  .dot{width:7px;height:7px;border-radius:50%;background:#059669;flex-shrink:0;}
+  .fg{margin-bottom:14px;}
+  .fg:last-child{margin-bottom:0;}
+  .fl{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--dim);margin-bottom:6px;display:block;}
+  .field{background:var(--bg);border:1.5px solid var(--border);border-radius:7px;
+    padding:11px 13px;font-family:var(--sans);font-size:14px;color:var(--text);
+    outline:none;width:100%;transition:border-color .15s;-webkit-appearance:none;}
+  .field:focus{border-color:#059669;background:#fff;}
+  .field::placeholder{color:var(--dimmer);}
+  select.field{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;
+    padding-right:30px;cursor:pointer;}
+  .time-display{background:var(#ecfdf5);border:1.5px solid var(#a7f3d0);
+    border-radius:7px;padding:11px 13px;font-family:var(--mono);font-size:14px;
+    color:#059669;width:100%;}
+  .submit-btn{width:100%;padding:16px;margin-top:8px;background:var(--blue);color:#fff;
+    border:none;border-radius:var(--r);font-family:var(--sans);font-size:15px;font-weight:700;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .submit-btn:active{transform:scale(.98);}
+  #success{display:none;min-height:100vh;align-items:center;justify-content:center;
+    flex-direction:column;text-align:center;padding:40px 24px;}
+  #success.show{display:flex;}
+  .ok-circle{width:72px;height:72px;border-radius:50%;background:var(--green-light);
+    border:2px solid var(--green);display:flex;align-items:center;justify-content:center;
+    font-size:32px;margin-bottom:16px;}
+  #success h2{font-size:20px;font-weight:800;margin-bottom:6px;}
+  #success p{color:var(--dim);font-size:13px;}
+  .sum-table{background:#fff;border:1px solid var(--border);border-radius:var(--r);
+    margin:18px 0;width:100%;max-width:340px;overflow:hidden;}
+  .sum-row{display:flex;justify-content:space-between;padding:9px 14px;
+    border-bottom:1px solid var(--border);font-size:13px;gap:10px;}
+  .sum-row:last-child{border-bottom:none;}
+  .sum-row .sk{color:var(--dim);white-space:nowrap;}
+  .sum-row .sv{font-weight:600;font-size:12px;font-family:var(--mono);text-align:right;}
+  .again-btn{padding:12px 28px;border:1.5px solid var(--border);border-radius:var(--r);
+    background:#fff;font-family:var(--sans);font-size:14px;font-weight:600;
+    cursor:pointer;color:var(--text);margin-top:4px;}
+  #loading{display:none;position:fixed;inset:0;background:rgba(255,255,255,.8);
+    backdrop-filter:blur(3px);align-items:center;justify-content:center;
+    flex-direction:column;z-index:999;}
+  #loading.show{display:flex;}
+  .spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:#059669;
+    border-radius:50%;animation:spin .7s linear infinite;margin-bottom:10px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #loading span{font-size:14px;color:var(--dim);}
+</style>
+</head>
+<body>
+<div id="loading"><div class="spin"></div><span data-en="Submitting…" data-zh="提交中…">Submitting…</span></div>
+
+<div id="main">
+  <div class="header">
+    <div class="header-left">
+      <h1 data-en="5S Log" data-zh="5S记录">5S Log</h1>
+      <p data-en="5S Inspection" data-zh="预防性维护">5S Inspection</p>
+    </div>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" id="btn-zh" onclick="setLang('zh')">中文</button>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span><span data-en="Details" data-zh="记录信息">Details</span></div>
+
+      <div class="fg">
+        <label class="fl" data-en="Machine" data-zh="机台">Machine</label>
+        <select class="field" id="pm-machine">
+          <option value="" data-en="— Select machine —" data-zh="— 选择机台 —">— Select machine —</option>
+          <optgroup label="Line 1 / 一线">
+            <option value="Stringer-1.1">Stringer-1.1</option>
+            <option value="Stringer-1.2">Stringer-1.2</option>
+            <option value="Stringer-1.3">Stringer-1.3</option>
+            <option value="Stringer-1.4">Stringer-1.4</option>
+            <option value="Stringer-1.5">Stringer-1.5</option>
+            <option value="Stringer-1.6">Stringer-1.6</option>
+          </optgroup>
+          <optgroup label="Line 2 / 二线">
+            <option value="Stringer-2.1">Stringer-2.1</option>
+            <option value="Stringer-2.2">Stringer-2.2</option>
+            <option value="Stringer-2.3">Stringer-2.3</option>
+            <option value="Stringer-2.4">Stringer-2.4</option>
+            <option value="Stringer-2.5">Stringer-2.5</option>
+            <option value="Stringer-2.6">Stringer-2.6</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="fg">
+        <label class="fl" data-en="Performed by" data-zh="执行人">Performed by</label>
+        <input class="field" id="pm-name" type="text"
+          data-ph-en="Your name" data-ph-zh="姓名"
+          placeholder="Your name" autocomplete="off">
+      </div>
+
+      <div class="fg">
+        <label class="fl" data-en="Timestamp" data-zh="执行时间">Timestamp</label>
+        <div class="time-display" id="pm-time">--</div>
+      </div>
+    </div>
+
+    <button class="submit-btn" onclick="submitForm()"
+      data-en="✓ Submit 5S Record" data-zh="✓ 提交5S记录">✓ Submit 5S Record</button>
+  </div>
+</div>
+
+<div id="success">
+  <div class="ok-circle">✓</div>
+  <h2 data-en="Submitted!" data-zh="提交成功！">Submitted!</h2>
+  <p data-en="5S record saved." data-zh="5S记录已保存。">5S record saved.</p>
+  <div class="sum-table" id="summary"></div>
+  <button class="again-btn" onclick="resetForm()"
+    data-en="← New Record" data-zh="← 再填一条">← New Record</button>
+</div>
+
+<script>
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbwy1kieESA4BlsN9sAI2N0b-v53sYN-20MLNVIKdHh0kIYcORD1eJmdMx3CbJTRn39ucw/exec";
+
+// Clock
+function getNow() {
+  return new Date().toLocaleString('en-US', {hour12:false});
+}
+function updateClock() {
+  document.getElementById('pm-time').textContent = getNow();
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// Language
+let lang = 'en';
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('[data-en]').forEach(el => {
+    el.textContent = l === 'en' ? el.dataset.en : el.dataset.zh;
+  });
+  document.querySelectorAll('[data-ph-en]').forEach(el => {
+    el.placeholder = l === 'en' ? el.dataset.phEn : el.dataset.phZh;
+  });
+  // Update select placeholder option
+  const sel = document.getElementById('pm-machine');
+  sel.options[0].text = l === 'en' ? '— Select machine —' : '— 选择机台 —';
+  document.getElementById('btn-en').className = 'lang-btn' + (l === 'en' ? ' active' : '');
+  document.getElementById('btn-zh').className = 'lang-btn' + (l === 'zh' ? ' active' : '');
+  // Keep time display live
+  updateClock();
+}
+document.addEventListener('DOMContentLoaded', () => setLang('en'));
+
+// Submit
+async function submitForm() {
+  const machine = document.getElementById('pm-machine').value;
+  const name    = document.getElementById('pm-name').value.trim();
+  const ts      = getNow();
+
+  if (!machine) { alert(lang==='zh' ? '请选择机台' : 'Please select a machine'); return; }
+  if (!name)    { alert(lang==='zh' ? '请填写执行人姓名' : 'Please enter your name'); return; }
+
+  const payload = { formType: '5s', machine, name, timestamp: ts };
+
+  document.getElementById('loading').classList.add('show');
+  try {
+    await fetch(SHEET_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    showSuccess(machine, name, ts);
+  } catch(e) {
+    alert(lang==='zh' ? '提交失败，请重试' : 'Submission failed, please retry');
+  } finally {
+    document.getElementById('loading').classList.remove('show');
+  }
+}
+
+function showSuccess(machine, name, ts) {
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('success').classList.add('show');
+  const rows = lang==='zh'
+    ? [['机台', machine], ['执行人', name], ['时间', ts]]
+    : [['Machine', machine], ['Performed by', name], ['Time', ts]];
+  document.getElementById('summary').innerHTML = rows
+    .map(([k,v]) => `<div class="sum-row"><span class="sk">${k}</span><span class="sv">${v}</span></div>`).join('');
+}
+
+function resetForm() {
+  document.getElementById('main').style.display = 'block';
+  document.getElementById('success').classList.remove('show');
+  document.getElementById('pm-machine').value = '';
+  document.getElementById('pm-name').value = '';
+}
+</script>
+</body>
+</html>
